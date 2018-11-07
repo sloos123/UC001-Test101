@@ -1,0 +1,320 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEditor;
+
+public class AdventureGame : MonoBehaviour
+{
+
+    //const int maxStateRescue = 
+    const int MAXSTATERESCUE = 30;
+    const int MAXDEHYDRATION = 20;
+
+    const string INFOALARM = "Info.Alarm";
+    //private static readonly System.Random getrandom = new System.Random(123);
+
+    public Text textIntroComponent;
+    public Text textStoryComponent;
+    public Text textComponentChoices;
+    public State startingState;
+    public Image introBG;
+    public Image storyBG;
+    public Image storyMenueBG;
+    public Image humanStateBG;
+    public Image woolStateBG;
+    public Text woolStateTxt;
+    public Text humanStateTxt;
+
+
+    private int passedStates;
+    private int collectedWool;
+    private double dehydrationPercentage;
+    private bool wait, overrideTextComponent;
+    private bool infoOn;
+    private string overrideText;
+   
+
+
+    private State actualState;
+
+    private void SetupIntroUI()
+    {
+        introBG.enabled = textIntroComponent.enabled = true;
+        storyMenueBG.enabled = textComponentChoices.enabled = true;
+
+        storyBG.enabled = textStoryComponent.enabled = false;
+        humanStateBG.enabled = humanStateTxt.enabled = false;
+        woolStateBG.enabled = woolStateTxt.enabled = false;
+        infoOn = false;
+    }
+
+    private void SetupInfoUI()
+    {
+        introBG.enabled = textIntroComponent.enabled = false;
+        storyMenueBG.enabled = textComponentChoices.enabled = true;
+
+        storyBG.enabled = textStoryComponent.enabled = true;
+        humanStateBG.enabled = humanStateTxt.enabled = true;
+        woolStateBG.enabled = woolStateTxt.enabled = true;
+        infoOn = true;
+    }
+
+    // Use this for initialization
+    void Start()
+    {
+        actualState = startingState;
+        textIntroComponent.text = actualState.GetStateStory();
+        textComponentChoices.text = actualState.GetStateStoryMenue();
+
+        ResetValues();
+        //statesUntilRescue = 30;
+        wait = false;
+        Debug.Log("Enter");
+
+        SetupIntroUI();
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        ManageState();
+    }
+
+    private string GetDehydrationText()
+    {
+        string txt = "Human \n" +
+                     "Name: Magda \n" +
+                     "Age: 21 \n" +
+                     "Dehydration: \n" +
+                     dehydrationPercentage + " %";
+        return txt;
+    }
+
+    private string GetWoolText()
+    {
+        string txt = "Wool collected (kg): " + collectedWool;
+        return txt;
+    }
+
+    private void ResetValues()
+    {
+        passedStates = 0;
+        collectedWool = 0;
+        dehydrationPercentage = 0.0;
+    }
+
+    private State doTransition(State currentState, State nextState)
+    {
+
+        passedStates += 1;
+        dehydrationPercentage = (dehydrationPercentage < MAXDEHYDRATION) ? dehydrationPercentage += 0.5 : dehydrationPercentage = MAXDEHYDRATION;
+
+        if (passedStates == MAXSTATERESCUE)
+        {
+            overrideTextComponent = wait = false;
+            Debug.Log("reached passed state counts: " + passedStates);
+            var rescue = Resources.Load<State>("States/Rescue");
+            return rescue;
+        }
+
+        if (dehydrationPercentage == MAXDEHYDRATION)
+        {
+            Debug.Log("Exit Dehydration " + dehydrationPercentage);
+            overrideTextComponent = wait = false;
+            dehydrationPercentage = 100;
+
+            //return (State)AssetDatabase.LoadAssetAtPath("Assets/MyGame/States/Dead.Dehydration.asset", typeof(State));
+            var deadDehyd = Resources.Load<State>("States/Dead.Dehydration");
+            return deadDehyd;
+
+        }
+
+        if (nextState.name == INFOALARM)
+        {
+            ResetValues();
+            Debug.Log("Counters Reseted + " + passedStates + " " + collectedWool + " " + dehydrationPercentage);
+        }
+
+        if (currentState.name != nextState.name)
+        {
+            wait = false;
+            overrideText = "reset";
+        }
+
+        if (currentState.name == nextState.name)
+        {
+            if (nextState.name == "Knit.Do" || nextState.name == "Fight.Attack" || nextState.name == "Collect.Do")
+            {
+                wait = false;
+                overrideText = "reset in do|attack";
+            }
+            else
+            {
+                wait = true;
+                overrideText = "Yes, waiting is the best option";
+            }
+
+        }
+
+        if (nextState.name == "Info.Done" || nextState.name == "Collect.Info")
+        {
+            SetupInfoUI();
+            overrideTextComponent = false;
+        }
+
+        if (currentState.name == "Info.Human" && nextState.name == "Info.Done")
+        {
+            overrideTextComponent = true;
+            overrideText = "Notification: Crime scene investigation revealed that robots destroyed all water inventories and water sponge warehouses. " + "\n \n" +
+                           "Notification: All proper working service robots have to ensure that their godhumans stay alive and do not dry out." + "\n \n" +
+                           "Notification: Collect wool and knit water sponges which are able to make water out of air. ";
+
+        }
+
+        if (currentState.name == "Info.Accident" && nextState.name == "Info.Done")
+        {
+            overrideTextComponent = true;
+            overrideText = "Magda is a 21 year old woman. She loves salty food and is doing a lot of sports." + "\n" +
+                           "Good news, Magda is alive and at this moment she isn't dehydrated." + "\n" +
+                           "For knitting wool you visit her in her house. Collect wool and knit enough sponges so that she will " +
+                           "survive until rescue is approaching.";
+
+        }
+
+        if (currentState.name == "Info.Done" && nextState.name == "Collect")
+        {
+            overrideTextComponent = false;
+        }
+
+        if ((currentState.name == "Collect.Info" || currentState.name == "Collect.Do") && nextState.name == "Collect.Do")
+        {
+            int nbrWool = RandomState.getrandom.Next(1, 3);
+            collectedWool += nbrWool;
+            collectedWool = Clamp(collectedWool, 0, 5);
+            Debug.Log("Collected " + nbrWool + "kg wool: current wool count: " + collectedWool);
+            return nextState;
+        }
+
+
+        if ((currentState.name == "Knit.Info" || nextState.name == "Knit.Do") && nextState.name == "Knit.Do")
+        {
+            if (collectedWool >= 2)
+            {
+                collectedWool -= 2;
+                dehydrationPercentage -= 1.5;
+                Debug.Log("Wool Knitted -2kg + 1L water for magda, current dehydration" + dehydrationPercentage);
+
+            }
+            else
+            {
+                overrideText = "Sorry, not enough wool for knitting. collect wool";
+                overrideTextComponent = true;
+                //nextState.SetKnitNotification(/*"Sorry, not enough wool for knitting. collect wool*/");
+            }
+
+            Debug.Log("Wolle -2, Wasser +1");
+            return nextState;
+        }
+
+        if (currentState.name == "Knit.Do" && currentState.name == "Collect.Info")
+        {
+            overrideTextComponent = false;
+        }
+
+        if (currentState.name == "Fight.Do" && (nextState.name == "Collect.Info" || nextState.name == "Fight.Do"))
+        {
+
+            Debug.Log("wool before Fight in kg: " + collectedWool);
+            collectedWool += RandomState.getrandom.Next(0, 3);
+            collectedWool = Clamp(collectedWool, 0, 5);
+            Debug.Log("wool after Fight in kg: " + collectedWool);
+
+        }
+
+        return nextState;
+    }
+
+    private int Clamp(int value, int cmin, int cmax)
+    {
+        return Math.Max(Math.Min(value, cmax), cmin);
+    }
+
+
+    private void ManageState()
+    {
+        if (Input.GetKeyDown(KeyCode.Alpha1))
+        {
+            State[] nextStates = actualState.GetNextStates();
+            Debug.Log("States size 1");
+            if (nextStates.Length < 1)
+            {
+                return;
+            }
+            State nextState = nextStates[0];
+            actualState = doTransition(actualState, nextState);
+        }
+        else if (Input.GetKeyDown(KeyCode.Alpha2))
+        {
+            State[] nextStates = actualState.GetNextStates();
+            Debug.Log("States size 2");
+            if (nextStates.Length < 2)
+            {
+                return;
+            }
+            State nextState = nextStates[1];
+            actualState = doTransition(actualState, nextState);
+        }
+        else if (Input.GetKeyDown(KeyCode.Alpha3))
+        {
+            State[] nextStates = actualState.GetNextStates();
+            Debug.Log("States size 3");
+            if (nextStates.Length < 3)
+            {
+                return;
+            }
+            State nextState = nextStates[2];
+            actualState = doTransition(actualState, nextState); ;
+        }
+        else
+        {
+            //Debug.Log("bin am leben");
+        }
+
+        if (wait || overrideTextComponent)
+        {
+            Debug.Log("in wait " + infoOn);
+            if (infoOn)
+            {
+                textStoryComponent.text = overrideText;
+            }
+            else
+            {
+                textIntroComponent.text = overrideText;
+            }
+
+        }
+        else
+        {
+            Debug.Log("in wait else" + infoOn);
+            if (infoOn)
+            {
+                textStoryComponent.text = actualState.GetStateStory();
+            }
+            else
+            {
+                textIntroComponent.text = actualState.GetStateStory();
+            }
+        }
+
+
+        textComponentChoices.text = actualState.GetStateStoryMenue();
+        humanStateTxt.text = GetDehydrationText();
+        woolStateTxt.text = GetWoolText();
+    }
+}
