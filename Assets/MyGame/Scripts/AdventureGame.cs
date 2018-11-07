@@ -15,8 +15,25 @@ public class AdventureGame : MonoBehaviour
     //const int maxStateRescue = 
     const int MAXSTATERESCUE = 30;
     const int MAXDEHYDRATION = 20;
+    const double DEADDEHYDRATION = 100;
+    const int MINWOOLKNIT = 2;
+    const int COSTWOOL = 2;
+    const double DRINKWATER = 1.5;
+    const double DEHYDRATIONSTEP = 0.5;
+    const int MINRDMWOOL = 1;
+    const int MAXRDMWOOL = 3;
 
     const string INFOALARM = "Info.Alarm";
+    const string KNITDO = "Knit.do";
+    const string FIGHTATTACK = "Fight.Attack";
+    const string COLLECTDO = "Collect.Do";
+    const string INFODONE = "Info.Done";
+    const string COLLECTINFO = "Collect.Info";
+    const string KNITINFO = "Knit.Info";
+    const string FIGHTDO = "Fight.Do";
+    const string INFOHUMAN = "Info.Human";
+    const string INFOACCIDENT = "Info.Accident";
+    const string COLLECT = "Collect";
     //private static readonly System.Random getrandom = new System.Random(123);
 
     public Text textIntroComponent;
@@ -113,7 +130,7 @@ public class AdventureGame : MonoBehaviour
     {
 
         passedStates += 1;
-        dehydrationPercentage = (dehydrationPercentage < MAXDEHYDRATION) ? dehydrationPercentage += 0.5 : dehydrationPercentage = MAXDEHYDRATION;
+        dehydrationPercentage = (dehydrationPercentage < MAXDEHYDRATION) ? dehydrationPercentage += DEHYDRATIONSTEP : dehydrationPercentage = MAXDEHYDRATION;
 
         if (passedStates == MAXSTATERESCUE)
         {
@@ -127,7 +144,7 @@ public class AdventureGame : MonoBehaviour
         {
             Debug.Log("Exit Dehydration " + dehydrationPercentage);
             overrideTextComponent = wait = false;
-            dehydrationPercentage = 100;
+            dehydrationPercentage = DEADDEHYDRATION;
 
             //return (State)AssetDatabase.LoadAssetAtPath("Assets/MyGame/States/Dead.Dehydration.asset", typeof(State));
             var deadDehyd = Resources.Load<State>("States/Dead.Dehydration");
@@ -149,7 +166,7 @@ public class AdventureGame : MonoBehaviour
 
         if (currentState.name == nextState.name)
         {
-            if (nextState.name == "Knit.Do" || nextState.name == "Fight.Attack" || nextState.name == "Collect.Do")
+            if (nextState.name == KNITDO || nextState.name == FIGHTATTACK || nextState.name == COLLECTDO)
             {
                 wait = false;
                 overrideText = "reset in do|attack";
@@ -162,13 +179,13 @@ public class AdventureGame : MonoBehaviour
 
         }
 
-        if (nextState.name == "Info.Done" || nextState.name == "Collect.Info")
+        if (nextState.name == INFODONE || nextState.name == COLLECTINFO)
         {
             SetupInfoUI();
             overrideTextComponent = false;
         }
 
-        if (currentState.name == "Info.Human" && nextState.name == "Info.Done")
+        if (currentState.name == INFOHUMAN && nextState.name == INFODONE)
         {
             overrideTextComponent = true;
             overrideText = "Notification: Crime scene investigation revealed that robots destroyed all water inventories and water sponge warehouses. " + "\n \n" +
@@ -177,7 +194,7 @@ public class AdventureGame : MonoBehaviour
 
         }
 
-        if (currentState.name == "Info.Accident" && nextState.name == "Info.Done")
+        if (currentState.name == INFOACCIDENT && nextState.name == INFODONE)
         {
             overrideTextComponent = true;
             overrideText = "Magda is a 21 year old woman. She loves salty food and is doing a lot of sports." + "\n" +
@@ -187,14 +204,14 @@ public class AdventureGame : MonoBehaviour
 
         }
 
-        if (currentState.name == "Info.Done" && nextState.name == "Collect")
+        if (currentState.name == INFODONE && nextState.name == COLLECT)
         {
             overrideTextComponent = false;
         }
 
-        if ((currentState.name == "Collect.Info" || currentState.name == "Collect.Do") && nextState.name == "Collect.Do")
+        if ((currentState.name == COLLECTINFO || currentState.name == COLLECTDO) && nextState.name == COLLECTDO)
         {
-            int nbrWool = RandomState.getrandom.Next(1, 3);
+            int nbrWool = RandomState.getrandom.Next(MINRDMWOOL, MAXRDMWOOL);
             collectedWool += nbrWool;
             collectedWool = Clamp(collectedWool, 0, 5);
             Debug.Log("Collected " + nbrWool + "kg wool: current wool count: " + collectedWool);
@@ -202,12 +219,12 @@ public class AdventureGame : MonoBehaviour
         }
 
 
-        if ((currentState.name == "Knit.Info" || nextState.name == "Knit.Do") && nextState.name == "Knit.Do")
+        if ((currentState.name == KNITINFO || nextState.name == KNITDO) && nextState.name == KNITDO)
         {
-            if (collectedWool >= 2)
+            if (collectedWool >= MINWOOLKNIT)
             {
-                collectedWool -= 2;
-                dehydrationPercentage -= 1.5;
+                collectedWool -= COSTWOOL;
+                dehydrationPercentage -= DRINKWATER;
                 Debug.Log("Wool Knitted -2kg + 1L water for magda, current dehydration" + dehydrationPercentage);
 
             }
@@ -222,12 +239,12 @@ public class AdventureGame : MonoBehaviour
             return nextState;
         }
 
-        if (currentState.name == "Knit.Do" && currentState.name == "Collect.Info")
+        if (currentState.name == KNITDO && currentState.name == COLLECTINFO)
         {
             overrideTextComponent = false;
         }
 
-        if (currentState.name == "Fight.Do" && (nextState.name == "Collect.Info" || nextState.name == "Fight.Do"))
+        if (currentState.name == FIGHTDO && (nextState.name == COLLECTINFO || nextState.name == FIGHTDO))
         {
 
             Debug.Log("wool before Fight in kg: " + collectedWool);
