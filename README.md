@@ -9,7 +9,7 @@ Developed on MacOS High Sierra with Unity Version 2018.2.6.f1.
     - SiFi Scenario with robots.
 
 + Who is the player? 
-    -The player is Eduard the service robot.
+    - The player is Eduard the service robot.
 
 + What is the goal? 
     - Stay alive (does not die of thirst) until rescue is approaching.
